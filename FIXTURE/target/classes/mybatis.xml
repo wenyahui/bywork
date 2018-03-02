@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="
+     http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd
+     http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+     http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-4.0.xsd
+     http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd
+     http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd
+     http://www.springframework.org/schema/task 
+     http://www.springframework.org/schema/task/spring-task-4.0.xsd
+     ">
+    
+    <bean name="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+		<property name="url" value="${JDBC.url}" />
+		<property name="username" value="${JDBC.username}" />
+		<property name="password" value="${JDBC.password}" />
+		<property name = "driverClassName" value = "${JDBC.driver}" />    
+		<property name="initialSize" value="${druid.initialSize}" />		
+		<property name="maxActive" value="${druid.maxActive}" />	
+		<property name="minIdle" value="${druid.minIdle}" />		
+		<property name="validationQuery" value="${druid.validationQuery}" />
+		<property name="testOnBorrow" value="${druid.testOnBorrow}" />
+		<property name="testOnReturn" value="${druid.testOnReturn}" />
+		<property name="testWhileIdle" value="${druid.testWhileIdle}" />
+		<property name="timeBetweenEvictionRunsMillis" value="${druid.timeBetweenEvictionRunsMillis}" />
+		<property name="minEvictableIdleTimeMillis" value="${druid.minEvictableIdleTimeMillis}" />
+		<property name="removeAbandoned" value="${druid.removeAbandoned}" />
+		<property name="removeAbandonedTimeout" value="${druid.removeAbandonedTimeout}" />
+		<property name="logAbandoned" value="${druid.logAbandoned}" />
+		<property name="filters" value="${druid.filters}" />
+	</bean>
+    
+    
+    <!-- spring和MyBatis完美整合，不需要mybatis的配置映射文件 -->  
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">  
+        <property name="dataSource" ref="dataSource" />  
+        <property name="configLocation" value="classpath:mybatis-paginator.xml"></property>
+        <!-- 自动扫描mapping.xml文件 -->  
+        <property name="mapperLocations">
+        	<array>
+                <value>classpath:com/fixture/*/mapper/*.xml</value>
+                <value>classpath:com/fixture/mapper/*.xml</value>
+            </array>
+        </property>  
+    </bean> 
+    
+    
+    <!-- DAO接口所在包名，Spring会自动查找其下的类 -->  
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+    	<!-- <property name="annotationClass" value="org.springframework.stereotype.Repository" />   -->
+        <property name="basePackage" value="com.fixture.*.dao,com.fixture.dao" />  
+       <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"></property>
+    </bean>  
+    
+     <!-- (事务管理)transaction manager, use JtaTransactionManager for global tx -->  
+    <bean id="transactionManager"  
+        class="org.springframework.jdbc.datasource.DataSourceTransactionManager">  
+        <property name="dataSource" ref="dataSource" />  
+    </bean>  
+    <!-- 开启事务注解 -->
+	<tx:annotation-driven transaction-manager="transactionManager"/>
+	
+	 <!-- 事务的传播特性 -->
+    <tx:advice id="txadvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="add*" propagation="REQUIRED"/>
+            <tx:method name="get*" propagation="REQUIRED" />
+            <tx:method name="del*" propagation="REQUIRED" />
+            <tx:method name="update*" propagation="REQUIRED" />
+
+            <!--hibernate4必须配置为开启事务 否则 getCurrentSession()获取不到 -->
+            <tx:method name="*" propagation="REQUIRED" read-only="true" />
+        </tx:attributes>
+    </tx:advice>
+  	
+  	<!-- 配置自定义Realm -->
+    <bean id="myRealm" class="com.fixture.realm.MyRealm">
+    	<property name="cachingEnabled" value="true" />
+		<!-- <property name="authenticationCachingEnabled" value="true" />
+		<property name="authenticationCacheName" value="authenticationCache" /> -->
+		<property name="authorizationCachingEnabled" value="true" />
+		<property name="authorizationCacheName" value="authorizationCache" />
+	</bean>
+
+    
+
+    <!-- Shiro过滤器 核心-->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <!-- Shiro的核心安全接口,这个属性是必须的 -->
+        <property name="securityManager" ref="securityManager"/>
+        <property name="filters">
+        	 <map>    
+                <entry key="api">
+                	<bean class="com.fixture.filter.ApiAuthenticationFilter">
+					</bean>
+                </entry> 
+                 <entry key="o">
+                    <ref bean="loginFilter" />
+                </entry>
+                <entry key="p">
+                    <ref bean="permissionFilter" />
+                </entry>
+                 <entry key="l">
+                    <ref bean="logout" />
+                </entry>
+            </map>
+        </property>
+        <!-- Shiro连接约束配置,即过滤链的定义 -->
+        <property name="filterChainDefinitions">
+            <value>
+                <!--anon 表示匿名访问，不需要认证以及授权-->
+                <!--authc表示需要认证 没有进行身份认证是不能进行访问的-->
+                /=anon
+                /index=anon
+                /vericode=anon		<!-- 验证码的 -->
+				/checkVericode=anon		<!-- 检验验证码的 -->
+                /api/** = api
+                
+				/druid/*=p[permission:admin]
+				/sys/generator/**=o
+				/logout=l
+
+            </value>
+        </property>
+    </bean>
+     <bean id="logout" class="org.apache.shiro.web.filter.authc.LogoutFilter"> 
+        <property name="redirectUrl" value="" /> 
+    </bean> 
+    <bean id="loginFilter" class="com.fixture.filter.LoginFilter">
+        <property name="noLoginUrl" value=""></property>
+    </bean>
+    <bean id="permissionFilter" class="com.fixture.filter.PermissionFilter">
+        <property name="noPermissionUrl" value="illegalAccess.html"/>
+    </bean>
+    
+    <!-- 会话ID生成器 -->
+	<bean id="sessionIdGenerator" class="org.apache.shiro.session.mgt.eis.JavaUuidSessionIdGenerator" />
+
+	<!-- 会话Cookie模板 -->
+	<bean id="mySessionIdCookie" class="org.apache.shiro.web.servlet.SimpleCookie">
+		<constructor-arg value="fixture_msid" />
+		<property name="httpOnly" value="true" />
+		<property name="maxAge" value="864000" /><!-- 有效期10天 -->
+	</bean>
+    
+    <!-- 会话DAO -->
+	<bean id="sessionDAO" class="org.apache.shiro.session.mgt.eis.EnterpriseCacheSessionDAO">
+		<property name="activeSessionsCacheName" value="shiro-activeSessionCache" />
+		<property name="sessionIdGenerator" ref="sessionIdGenerator" />
+	</bean>
+
+	<!-- 会话验证调度器 ,时间单位是毫秒-->
+	<bean id="sessionValidationScheduler" class="org.apache.shiro.session.mgt.quartz.QuartzSessionValidationScheduler">
+		<property name="sessionValidationInterval" value="1200000" />
+		<property name="sessionManager" ref="sessionManager" />
+	</bean>
+    
+    <!-- 会话管理 -->
+    <bean id="sessionManager" class="org.apache.shiro.web.session.mgt.DefaultWebSessionManager">
+        <!-- session的失效时常,单位是毫秒 -->
+        <property name="globalSessionTimeout" value="600000"/>
+        <!-- 删除失效的session -->
+        <property name="deleteInvalidSessions" value="true"/>
+        <property name="sessionValidationSchedulerEnabled" value="true" />
+		<property name="sessionValidationScheduler" ref="sessionValidationScheduler" />
+		<property name="sessionDAO" ref="sessionDAO" />
+		<property name="sessionIdCookieEnabled" value="true" />
+		<property name="sessionIdCookie" ref="mySessionIdCookie" />
+    </bean>
+
+	<!-- 缓存管理器 使用Ehcache实现 -->
+	<bean id="shiroCacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+		<property name="cacheManagerConfigFile" value="classpath:shiro_ehcache.xml" />
+	</bean>
+	
+	<!-- 安全管理器 -->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <property name="realm" ref="myRealm"/>
+        <property name="sessionManager" ref="sessionManager" />
+        <property name="cacheManager" ref="shiroCacheManager" />
+    </bean>
+    
+    <!-- Shiro生命周期处理器 -->
+    <bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
+
+    <!-- 开启Shiro注解 -->
+    <bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"
+          depends-on="lifecycleBeanPostProcessor"/>
+    <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+        <property name="securityManager" ref="securityManager"/>
+    </bean>
+</beans> 

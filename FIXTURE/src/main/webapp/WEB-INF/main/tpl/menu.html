@@ -1,0 +1,44 @@
+<aside>
+     <div id="sidebar"  class="nav-collapse ">
+         <!-- sidebar menu start-->
+         <ul class="sidebar-menu">
+             <li>
+                 <a class="" href="${base}/manager/index">
+                     <i class="icon-dashboard"></i>
+                     <span>控制台</span>
+                 </a>
+             </li>
+            <#if menus??> 
+              <#list menus as menu>
+             <li class="sub-menu <#if menu.id==res>open</#if>" >
+             	<#if (menu.childMenus?size>0)>
+                 <a href="javascript:;" class="<#if (menu.id==res)>active</#if>">
+                     <i class="${menu.icon}"></i>
+                     <span>${menu.name}</span>
+                     <span class="arrow <#if (menu.id==res)>open</#if>"></span>
+                 </a>
+                 <#else> 
+                 <a href="${menu.url}?res=${menu.id}" class="<#if (menu.id==res)>active</#if>">
+                     <i class="${menu.icon}"></i>
+                     <span>${menu.name}</span>
+                     <span class="arrow"></span>
+                 </a>
+                 </#if>
+                 <#if (menu.childMenus?size>0)>
+                  <ul class="sub" <#if (menu.id==res)>style="display:block;"</#if>>
+                  	<#list menu.childMenus as rm>
+                  		<li  <#if (rm_index==active&&menu.id=res)>class="active"</#if>>
+                  			<a href="${rm.url}?res=${menu.id}_${rm_index}">
+								${rm.name}
+							</a>
+			  			</li>
+					</#list>
+                 </ul>
+               </#if>
+             </li>
+           </#list>
+         </#if>
+         </ul>
+         <!-- sidebar menu end-->
+     </div>
+ </aside>

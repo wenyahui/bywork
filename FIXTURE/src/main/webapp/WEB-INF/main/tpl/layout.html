@@ -1,0 +1,23 @@
+<#macro header>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html style="height: auto; min-height: 100%;">
+<head>
+  <#include "/tpl/head.html">
+  <#nested> 
+</head>
+</#macro>
+<#macro body>
+<body>
+ <section id="container" class="">
+<#include "/tpl/header.html">
+<#include "/tpl/menu.html">
+<#nested>
+</section>
+<!-- /body -->
+</#macro>
+<#macro footer>
+<#include "/tpl/js.html">
+<#nested>
+</body>
+</html>
+</#macro>
