@@ -115,11 +115,10 @@
                 <!--anon 表示匿名访问，不需要认证以及授权-->
                 <!--authc表示需要认证 没有进行身份认证是不能进行访问的-->
                 /=anon
-                /index=anon
                 /vericode=anon		<!-- 验证码的 -->
 				/checkVericode=anon		<!-- 检验验证码的 -->
                 /api/** = api
-                
+                /ms/**=o
 				/druid/*=p[permission:admin]
 				/sys/generator/**=o
 				/logout=l

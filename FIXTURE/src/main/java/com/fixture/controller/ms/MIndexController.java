@@ -6,7 +6,7 @@
  * 修改时间：2017年5月5日
  */
 
-package com.fixture.controller;
+package com.fixture.controller.ms;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,17 +14,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 /**
  * 
 * @ClassName: IndexController 
-* @Description: 首页controller
+* @Description: 后台首页controller
 * @author wyh
 * @date 2018年3月1日 下午5:09:48 
 *
  */
 @Controller
-@RequestMapping("/")
-public class IndexController{
+@RequestMapping("/ms")
+public class MIndexController{
 	
-	@RequestMapping("")
-	public String login(){
-		return "login";
+	@RequestMapping("/index")
+	public String index(){
+		return "index";
 	}
 }
